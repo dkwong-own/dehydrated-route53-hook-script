@@ -136,17 +136,19 @@ function get_base_name() {
 function find_zone() {
   local DOMAIN="${1}"
 
-  local ZONELIST=$(cli53 list -format json | jq --raw-output '.[].Name' | sed -e 's/\.$//' | xargs echo -n)
+  local PUBLIC_ZONES=$(cli53 list -format json | jq -c '.[] | select( .Config.PrivateZone == false )')
 
   local TESTDOMAIN="${DOMAIN}"
+  local ZONE
 
   while [[ -n "$TESTDOMAIN" ]]; do
-    for zone in $ZONELIST; do
-      if [[ "$zone" == "$TESTDOMAIN" ]]; then
-        echo "$zone"
+    ZONE=$(echo $PUBLIC_ZONES | jq -c "select ( .Name == \"$TESTDOMAIN.\" )" | jq --raw-output '.Id')
+
+    if [[ -n "$ZONE" ]]; then
+        echo "$ZONE"
         return 0
-      fi
-    done
+    fi
+
     TESTDOMAIN=$(get_base_name "$TESTDOMAIN")
   done
 
